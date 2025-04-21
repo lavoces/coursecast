@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coursecast - Home</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/image.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+  <div class="bg-wrapper">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4 py-3">
+      <div class="container-fluid d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+          <a class="navbar-brand d-flex align-items-center me-4" href="#">
+            <img src="{{ url_for('static', filename='images/image.png') }}" alt="Logo" width="30" height="30" class="me-2">
+            Coursecast
+          </a>
+          <ul class="navbar-nav d-flex flex-row gap-3">
+            <li class="nav-item">
+              <a class="nav-link {% if active_page == 'home' %}active{% endif %}" href="{{ url_for('home') }}">Upload</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if active_page == 'predict' %}active{% endif %}" href="{{ url_for('predict') }}">Prediction</a>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="text-white mb-0">Welcome, {{username}}</span>
+          <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Logout</a>
+        </div>
+      </div>
+    </nav>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="container mt-5 d-flex justify-content-center">
+      <div class="card shadow p-5" style="width: 100%; max-width: 650px;">
+        <h4 class="mb-3 text-center">📂 Upload Enrollment Data</h4>
+        <form action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label for="file" class="form-label">Choose a CSV file:</label>
+            <input type="file" name="file" id="file" accept=".csv" class="form-control" required>
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Upload</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+    
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
