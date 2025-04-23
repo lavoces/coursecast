@@ -1,7 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from dash_app import create_dashboard
 import json
 import os
 from werkzeug.utils import secure_filename
+import pandas as pd
+import plotly
+import plotly.express as px
+import plotly.io as pio
 
 app = Flask(__name__)
 app.secret_key = 'mysecretkey'
@@ -23,30 +28,6 @@ def predict():
         return redirect(url_for('login'))
 
     return render_template('predict.html', active_page='predict')
-
-@app.route('/dashboard')
-def dashboard():
-    if 'user' not in session:
-        return redirect(url_for('login'))
-
-    import pandas as pd
-    import os
-
-    data_folder = 'data'
-    uploaded_files = os.listdir(data_folder)
-
-    if not uploaded_files:
-        flash('No data uploaded yet.', 'warning')
-        return redirect(url_for('home'))
-
-    latest_file = max([os.path.join(data_folder, f) for f in uploaded_files], key=os.path.getctime)
-    df = pd.read_csv(latest_file)
-
-    num_rows = df.shape[0]
-    num_cols = df.shape[1]
-    columns = df.columns.tolist()
-
-    return render_template('dashboard.html', num_rows=num_rows, num_cols=num_cols, columns=columns, table=df.head().to_html(classes='table table-striped', index=False), active_page='dashboard')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -96,11 +77,23 @@ def upload():
 
     file = request.files['file']
     if file.filename.endswith('.csv'):
-        from werkzeug.utils import secure_filename
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        flash('File uploaded successfully!', 'success')
+
+        import pandas as pd
+
+        df_new = pd.read_csv(filepath)
+        master_file = os.path.join(app.config['UPLOAD_FOLDER'], 'master_dataset.csv')
+
+        if os.path.exists(master_file):
+            df_master = pd.read_csv(master_file)
+            df_combined = pd.concat([df_master, df_new], ignore_index=True)
+        else:
+            df_combined = df_new
+
+        df_combined.to_csv(master_file, index=False)
+        flash('File uploaded and added to the dataset successfully!', 'success')
     else:
         flash('Only CSV files are allowed.', 'danger')
 
@@ -112,4 +105,5 @@ def logout():
   return redirect(url_for('login'))
 
 if __name__ == '__main__':
+  create_dashboard(app)
   app.run(debug=True)

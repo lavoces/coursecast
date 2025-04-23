@@ -1,5 +1,5 @@
 .bg-wrapper {
-  background: url('../static/images/bg.avif') no-repeat center center fixed;
+  background: url('../static/images/bg.png') no-repeat center center fixed;
   background-size: cover;
   position: relative;
   height: 100vh;
