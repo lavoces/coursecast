@@ -33,13 +33,32 @@ def create_dashboard(flask_app):
         return dash_app
 
     df_year = df.groupby('year')['num_of_enrollees'].sum().reset_index()
-    fig1 = px.line(df_year, x='year', y='num_of_enrollees', title='📈 Total Enrollees Per Year')
+    fig1 = px.line(df_year, x='year',
+                   y='num_of_enrollees',
+                   title='📈 Total Enrollees Per Year',
+                   labels={'year' : 'Academic Year', 'num_of_enrollees' : 'Number of Enrollees'}
+                )
+    fig1.update_traces(line=dict(width=4, color='green'))
 
     df_course = df.groupby('code')['num_of_enrollees'].sum().nlargest(5).reset_index()
-    fig2 = px.bar(df_course, x='code', y='num_of_enrollees', title='🏆 Top 5 Courses by Total Enrollees')
+    fig2 = px.bar(df_course, x='code',
+                  y='num_of_enrollees',
+                  title='🏆 Top 5 Courses by Total Enrollees',
+                  labels={'code' : 'Course', 'num_of_enrollees' : 'Number of Enrollees'},
+                  template='plotly_white'
+                  )
+    fig2.update_traces(marker_color='skyblue', marker_line_color='black', marker_line_width=1.2)
+    fig2.update_traces(text=df_course['num_of_enrollees'], textposition='outside')
+    fig2.update_layout(
+        height=500,
+        margin=dict(l=40, r=40, t=60, b=100),
+        title=dict(x=0.5, font=dict(size=20)),
+        xaxis_tickangle=-30,
+        xaxis_title=None,
+        yaxis_title='Number of Enrollees'
+    )
 
     dash_app.layout = html.Div([
-        # Navbar
         html.Nav([
             html.Div([
                 html.A([
@@ -60,7 +79,6 @@ def create_dashboard(flask_app):
             ], className="container-fluid d-flex justify-content-between align-items-center")
         ], className="navbar navbar-expand-lg navbar-dark bg-dark px-4 py-3"),
 
-        # Main Content
         html.Div([
             html.H2('📊 Dashboard', className='text-white mb-4'),
 
@@ -102,7 +120,7 @@ def create_dashboard(flask_app):
     def update_bar_chart(selected_year):
         filtered_df = df[df['year'] == selected_year]
         bar_df = filtered_df.groupby('coursename')['num_of_enrollees'].sum().reset_index().sort_values(by='num_of_enrollees')
-        return px.bar(
+        fig = px.bar(
         bar_df,
         x='num_of_enrollees',
         y='coursename',
@@ -110,7 +128,10 @@ def create_dashboard(flask_app):
         title=f'📊 Course Distribution in {selected_year}',
         labels={'num_of_enrollees': 'Enrollees', 'coursename': 'Course'},
         template='plotly_white'
-    )
+        )
+        fig.update_layout(height=600, margin=dict(l=150, r=50, t=50, b=50))
+        fig.update_traces(marker=dict(color='steelblue'), width=0.8)
+        return fig
 
     @dash_app.callback(
         Output('line-chart-course', 'figure'),
@@ -119,7 +140,13 @@ def create_dashboard(flask_app):
     def update_course_trend(course_name):
         filtered_df = df[df['coursename'] == course_name]
         trend_df = filtered_df.groupby('year')['num_of_enrollees'].sum().reset_index()
-        return px.line(trend_df, x='year', y='num_of_enrollees',
-                       title=f'📈 Enrollment Trend for {course_name}')
+        fig = px.line( trend_df,
+                       x='year',
+                       y='num_of_enrollees',
+                       title=f'📈 Enrollment Trend for {course_name}',
+                       labels={'year' : 'Academic Year', 'num_of_enrollees' : 'Number of Enrollees'}
+                    )
+        fig.update_traces(line=dict(width=4, color='green'))
+        return fig
 
     return dash_app

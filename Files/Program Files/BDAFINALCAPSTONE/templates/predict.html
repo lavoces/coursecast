@@ -22,7 +22,7 @@
               <a class="nav-link {% if active_page == 'home' %}active{% endif %}" href="{{ url_for('home') }}">Upload</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">Dashboard</a>
+              <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="/dashboard/">Dashboard</a>
             </li>
             <li class="nav-item">
               <a class="nav-link {% if active_page == 'predict' %}active{% endif %}" href="{{ url_for('predict') }}">Prediction</a>
@@ -34,11 +34,25 @@
       </div>
     </nav>
     
+
     <div class="container mt-5">
-      <h3 class="mb-3">Prediction Results</h3>
-      <p>This page will show predicted total enrollment and the course with the highest enrollment from your uploaded CSV file.</p>
-      <p><em>Coming soon!</em></p>
+      <h3 class="mb-3 text-white">Prediction Results</h3>
+
+      <div class="alert alert-info mt-4">
+        📅 Predicted Total Enrollees for {{ next_year }}:
+        <strong>{{ predicted_enrollees }} students</strong>
+      </div>
+
+      <div class="alert alert-success">
+        🏆 Predicted Most Popular Course Next Semester :
+        <strong>{{ top_course }}</strong>
+      </div>
     </div>
+
+    <div class='mt-5'>
+      {{ chart_html | safe }}
+    </div>
+
   </div>
 </body>
 </html>
