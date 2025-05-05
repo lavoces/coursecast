@@ -35,80 +35,149 @@ def predict():
     df['year'] = pd.to_numeric(df['year'], errors='coerce')
     df['num_of_enrollees'] = pd.to_numeric(df['num_of_enrollees'], errors='coerce')
     df.dropna(subset=['year', 'num_of_enrollees'], inplace=True)
-    
+
     # Group by year to get total enrollees
     grouped = df.groupby('year')['num_of_enrollees'].sum().reset_index()
 
-    # Train model
+    # Train model for total enrollment prediction
     X = grouped[['year']]
     y = grouped['num_of_enrollees']
     model = LinearRegression()
     model.fit(X, y)
 
-    # Predict next year
+    # Predict next year total enrollees
     latest_year = int(grouped['year'].max())
     next_year = latest_year + 1
-    next_year_df = pd.DataFrame([[next_year]], columns=['year'])
-    predicted_enrollees = int(model.predict(next_year_df)[0])
+    future_years = [latest_year + i for i in range(1, 4)]
+    future_df = pd.DataFrame(future_years, columns=['year'])
+    predicted_enrollees_list = model.predict(future_df).astype(int)
 
-    # Find top course this year
-    top_course = (
-        df[df['year'] == latest_year]
-        .groupby('code')['num_of_enrollees']
-        .sum()
-        .sort_values(ascending=False)
-        .idxmax()
-    )
+    # Predict for each course and find top 3
+    course_predictions = []
+    for code, group in df.groupby('code'):
+        course_data = group.groupby('year')['num_of_enrollees'].sum().reset_index()
 
+        if len(course_data) >= 2:
+            x_course = course_data[['year']]
+            y_course = course_data['num_of_enrollees']
+
+            model = LinearRegression()
+            model.fit(x_course, y_course)
+
+            prediction_df = pd.DataFrame([[next_year]], columns=['year'])
+            predicted = int(model.predict(prediction_df)[0])
+
+            course_predictions.append({
+                'code': code,
+                'predicted': predicted
+            })
+
+    # Sort and select top 3
+    top_courses = sorted(course_predictions, key=lambda x: x['predicted'], reverse=True)[:3]
+
+    # Course name mapping
     course_name_map = {
-        'BSAg' : 'Bachelor of Science in Agriculture',
-        'BAC' : 'Bachelor Of Arts In Communication',
-        'POLSCI' : 'Bachelor Of Arts In Political Science',
-        'BSSW' : 'Bachelor Of Science In Social Work',
-        'BSA' : 'Bachelor Of Science In Accountancy',
-        'BSAIS' : 'Bachelor Of Science In Accounting Information System',
-        'Entrep' : 'Bs In Entrepreneurship',
-        'BSBA' : 'Bachelor Of Science In Business Administration',
-        'BSCS' : 'Bachelor Of Science In Computer Science',
-        'BSEMC' : 'Bachelor Of Science In Entertainment And Multimedia Computing',
-        'BSIT' : 'Bachelor Of Science In Information Technology',
-        'CRIM' : 'Bachelor Of Science In Criminology',
-        'BEEd' : 'Bachelor Of Elementary Education',
-        'BSEd' : 'Bachelor Of Secondary Education',
-        'BSCE' : 'Bachelor Of Science In Civil Engineering',
-        'BSCpE' : 'Bachelor Of Science In Computer Engineering',
-        'BSEE' : 'Bachelor Of Science In Electrical Engineering',
-        'BSHM' : 'Bachelor Of Science In Hospitality Management',
-        'BSTM' : 'Bachelor Of Science In Tourism Management',
-        'BSBIO' : 'Bachelor Of Science In Biology',
-        'BIT' : 'Bachelor In Industrial Technology',
-        'BSF' : 'Bachelor Of Science In Fisheries',
-        'BSM' : 'Bachelor Of Science In Midwifery',
-        'BSN' : 'Bachelor Of Science In Nursing'
+        'BSAg': 'Bachelor of Science in Agriculture',
+        'BAC': 'Bachelor Of Arts In Communication',
+        'POLSCI': 'Bachelor Of Arts In Political Science',
+        'BSSW': 'Bachelor Of Science In Social Work',
+        'BSA': 'Bachelor Of Science In Accountancy',
+        'BSAIS': 'Bachelor Of Science In Accounting Information System',
+        'Entrep': 'BS in Entrepreneurship',
+        'BSBA': 'Bachelor Of Science In Business Administration',
+        'BSCS': 'Bachelor Of Science In Computer Science',
+        'BSEMC': 'Bachelor Of Science In Entertainment And Multimedia Computing',
+        'BSIT': 'Bachelor Of Science In Information Technology',
+        'CRIM': 'Bachelor Of Science In Criminology',
+        'BEEd': 'Bachelor Of Elementary Education',
+        'BSEd': 'Bachelor Of Secondary Education',
+        'BSCE': 'Bachelor Of Science In Civil Engineering',
+        'BSCpE': 'Bachelor Of Science In Computer Engineering',
+        'BSEE': 'Bachelor Of Science In Electrical Engineering',
+        'BSHM': 'Bachelor Of Science In Hospitality Management',
+        'BSTM': 'Bachelor Of Science In Tourism Management',
+        'BSBIO': 'Bachelor Of Science In Biology',
+        'BIT': 'Bachelor In Industrial Technology',
+        'BSF': 'Bachelor Of Science In Fisheries',
+        'BSM': 'Bachelor Of Science In Midwifery',
+        'BSN': 'Bachelor Of Science In Nursing'
     }
 
-    top_course_full = course_name_map.get(top_course, top_course)
+    for course in top_courses:
+        course['name'] = course_name_map.get(course['code'], course['code'])
 
+    # Total enrollment trend chart
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=grouped['year'], y=grouped['num_of_enrollees'], mode='lines+markers', name='Actual'))
-    fig.add_trace(go.Scatter(x=[next_year], y=[predicted_enrollees], mode='markers', marker=dict(size=10, color='red'), name='Prediction'))
+    # Actual data
+    fig.add_trace(go.Scatter(
+        x=grouped['year'],
+        y=grouped['num_of_enrollees'],
+        mode='lines+markers',
+        name='Actual'
+    ))
+    # Predicted future years
+    fig.add_trace(go.Scatter(
+        x=future_years,
+        y=predicted_enrollees_list,
+        mode='lines+markers',
+        line=dict(color='red'),
+        name='Predicted'
+    ))
 
     fig.update_layout(
-       title='Enrollment Trend with Prediction',
-       xaxis_title='Year',
-       yaxis_title='Total Enrollees',
-       template='plotly_white'
+        title='Enrollment Trend with Prediction',
+        xaxis_title='Year',
+        yaxis_title='Total Enrollees',
+        template='plotly_white'
     )
-
     chart_html = pio.to_html(fig, full_html=False)
+
+    actual_values = []
+    for course in top_courses:
+       course_code = course['code']
+       course_df = df[(df['code'] == course_code) & (df['year'] == latest_year)]
+       total_actual = course_df['num_of_enrollees'].sum()
+       actual_values.append(total_actual)
+
+    predicted_values = [course['predicted'] for course in top_courses]
+    course_labels = [course['name'] for course in top_courses]
+
+    # Bar chart for top 3 course predictions
+    bar_fig = go.Figure(data=[
+        go.Bar(
+            name=f'Actual {latest_year}',
+            x=course_labels,
+            y=actual_values,
+            marker_color='steelblue'
+        ),
+        go.Bar(
+            name=f'Predicted {next_year}',
+            x=course_labels,
+            y=predicted_values,
+            marker_color='orange'
+        )
+    ])
+
+    bar_fig.update_layout(
+        barmode='group',
+        title=f'Top 3 Course Enrollment: Actual {latest_year} vs Predicted {next_year}',
+        xaxis_title='Course',
+        yaxis_title='Number of Enrollees',
+        template='plotly_white'
+    )
+    bar_fig.update_traces(marker_line_color='black', marker_line_width=1.2)
+    bar_chart_html = pio.to_html(bar_fig, full_html=False)
 
     return render_template(
         'predict.html',
         active_page='predict',
         next_year=next_year,
-        predicted_enrollees=predicted_enrollees,
-        top_course=top_course_full,
-        chart_html=chart_html
+        future_years=future_years,
+        predicted_enrollees=predicted_enrollees_list,
+        top_courses=top_courses,
+        next_year_prediction=predicted_enrollees_list[0],
+        chart_html=chart_html,
+        bar_chart_html=bar_chart_html
     )
 
 @app.route('/login', methods=['GET', 'POST'])

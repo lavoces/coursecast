@@ -39,7 +39,7 @@ def create_dashboard(flask_app):
                    labels={'year' : 'Academic Year', 'num_of_enrollees' : 'Number of Enrollees'}
                 )
     fig1.update_traces(line=dict(width=4, color='green'))
-
+    
     df_course = df.groupby('code')['num_of_enrollees'].sum().nlargest(5).reset_index()
     fig2 = px.bar(df_course, x='code',
                   y='num_of_enrollees',
