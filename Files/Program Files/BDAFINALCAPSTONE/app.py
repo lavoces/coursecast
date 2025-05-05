@@ -223,31 +223,46 @@ def home():
   
 @app.route('/upload', methods=['POST'])
 def upload():
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    import pandas as pd
+    import os
+    from werkzeug.utils import secure_filename
+    from flask import flash, redirect, url_for
 
-    file = request.files['file']
-    if file.filename.endswith('.csv'):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+    REQUIRED_COLUMNS = {'code', 'coursename', 'num_of_enrollees', 'semester', 'year'}
 
-        import pandas as pd
+    uploaded_file = request.files['file']
+    if uploaded_file.filename == '':
+        flash('No file selected.')
+        return redirect(url_for('home'))
 
-        df_new = pd.read_csv(filepath)
-        master_file = os.path.join(app.config['UPLOAD_FOLDER'], 'master_dataset.csv')
+    filename = secure_filename(uploaded_file.filename)
+    filepath = os.path.join('data/', filename)
+    uploaded_file.save(filepath)
 
-        if os.path.exists(master_file):
-            df_master = pd.read_csv(master_file)
-            df_combined = pd.concat([df_master, df_new], ignore_index=True)
-        else:
-            df_combined = df_new
+    try:
+        # Try UTF-8 first
+        df_new = pd.read_csv(filepath, encoding='utf-8')
+    except UnicodeDecodeError:
+        # Fallback for non-UTF-8 files
+        df_new = pd.read_csv(filepath, encoding='latin1')
 
-        df_combined.to_csv(master_file, index=False)
-        flash('File uploaded and added to the dataset successfully!', 'success')
+    # Validate columns
+    if set(df_new.columns) != REQUIRED_COLUMNS:
+        flash('❌ Upload failed: CSV must contain exactly the following columns: code, course_name, num_of_enrollees, semester, year', 'danger')
+        os.remove(filepath)  # optional: remove invalid file
+        return redirect(url_for('home'))
+
+    # Proceed with merging to master dataset, etc.
+    master_path = 'data/master_dataset.csv'
+    if os.path.exists(master_path):
+        df_master = pd.read_csv(master_path)
+        df_combined = pd.concat([df_master, df_new], ignore_index=True)
     else:
-        flash('Only CSV files are allowed.', 'danger')
+        df_combined = df_new
 
+    df_combined.to_csv(master_path, index=False)
+
+    flash('✅ File uploaded and processed successfully.', 'success')
     return redirect(url_for('home'))
 
 @app.route('/logout')
