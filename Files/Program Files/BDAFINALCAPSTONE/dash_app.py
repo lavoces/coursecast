@@ -39,7 +39,6 @@ def create_dashboard(flask_app):
                    labels={'year' : 'Academic Year', 'num_of_enrollees' : 'Number of Enrollees'}
                 )
     fig1.update_traces(line=dict(width=4, color='green'))
-    
     df_course = df.groupby('code')['num_of_enrollees'].sum().nlargest(5).reset_index()
     fig2 = px.bar(df_course, x='code',
                   y='num_of_enrollees',
@@ -92,7 +91,7 @@ def create_dashboard(flask_app):
                     options=[{'label': int(year), 'value': int(year)} for year in sorted(df['year'].unique())],
                     value=int(df['year'].max())
                 ),
-                dcc.Graph(id='pie-chart')
+                dcc.Graph(id='bar-chart')
             ], className='chart-container'),
 
             html.Div([
@@ -114,7 +113,7 @@ def create_dashboard(flask_app):
     })
 
     @dash_app.callback(
-        Output('pie-chart', 'figure'),
+        Output('bar-chart', 'figure'),
         Input('year-dropdown', 'value')
     )
     def update_bar_chart(selected_year):
